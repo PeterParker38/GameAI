@@ -27,7 +27,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from sentence_transformers import SentenceTransformer
-from neo4j import GraphDatabase
+from test import GraphDatabase
 from typing import TypedDict, Annotated
 import numpy as np
 import uuid
@@ -158,7 +158,7 @@ def send_to_db(npc_id: str, npc_name: str, player_id: str, summary: str) -> dict
 
 """### DB"""
 
-from neo4j import GraphDatabase
+from test import GraphDatabase
 
 driver = GraphDatabase.driver(
     "bolt://localhost:7687",
