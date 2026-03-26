@@ -1,4 +1,4 @@
-
+# This global state only for reference, to get an idea of what keys , i am using , we will remove it later...
 global_state = {
     "phase": 1,
     "input": "",
