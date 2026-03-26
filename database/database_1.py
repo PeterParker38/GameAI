@@ -1052,7 +1052,7 @@ response_formatter = ResponseFormatter()
 
 
 
-def get_from_db(user_input):
+def retrieve(user_input):
     user_input = input("\nPlayer: ")
 
     output = run_game_query(
@@ -1063,5 +1063,5 @@ def get_from_db(user_input):
         response_formatter
     )
 
-    out = ("\nGame:\n", output)
+    out = ("\nDatabase:\n", output)
     return out
