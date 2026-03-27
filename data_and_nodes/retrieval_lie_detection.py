@@ -66,7 +66,19 @@ resond with this exact structured JSON
         ans = raw[start:end]
         if(ans['caught'] != 'none'):
             lies_caught.append(ans)
-        return {'npc.lies_caught': lies_caught}
+            npc.lies_caught = lies_caught
+            return {'npcs':
+                {
+                npc_name: npc
+                }
+            }
+            
     except Exception:
         print("json failed, lie cant be sent, sending no change")
-        return {'npc.lies_caught': lies_caught}
+        return {'npcs':
+                {
+                npc_name: npc
+                }
+            }
+        
+print("retrieval_lie_detection.py: run successful")

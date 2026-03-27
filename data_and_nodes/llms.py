@@ -1,9 +1,9 @@
 ## pip install dotenv
-from dotenv import load_env
+from dotenv import load_dotenv
 import os
 from langchain_groq import ChatGroq
 
-load_env()
+load_dotenv()
 gr1 = os.getenv('GROQ_API1')
 gr2 = os.getenv('GROQ_API2')
 
@@ -17,3 +17,5 @@ speed = ChatGroq(
     temperature = 0,
     groq_api_key = gr2
 )
+
+print("llm.py: llms initialised")

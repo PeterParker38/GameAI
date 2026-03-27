@@ -87,7 +87,8 @@ class IntentEngine:
     """
 
     def __init__(self, api_key: str):
-        google_key = api_key
+        global google_key
+        api_key = google_key
         genai.configure(api_key=api_key)
 
         self._model = genai.GenerativeModel(

@@ -167,4 +167,5 @@ def accusation_node(global_state, accused_name):
 
     return global_state, f"Wrong. The evidence does not support accusing {accused_name}."
 
-
+##this line has been added for cross verification, dont remove it
+print("sus.py: run successful")
