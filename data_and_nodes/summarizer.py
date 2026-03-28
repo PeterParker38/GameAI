@@ -53,12 +53,14 @@ def summarization_node(global_state):
 
     response = speed.invoke(prompt_edited)
 
-    summary_line = response.content
+    summary_line = response.content.strip() if hasattr(response, "content") else str(response).strip()
+
     old_summary = npc["running_summary"]
     new_summary = old_summary+ summary_line
     npc['running_summary'] = new_summary
     return {'npcs':
             {
+                **global_state['npcs'],
                 npc_name: npc
             }
     }
