@@ -113,16 +113,6 @@ class NPC(BaseModel):
     prompt_final: str = ""
 
 
-
-
-class Officer(BaseModel):
-    npc_id: str = 'officer'
-    chat_history: list[dict] = [{}]
-    running_summary: str = ""
-    prompt: str = ""
-    prompt_final: str = officer_prompt
-
-
 class State(TypedDict):
     current_npc: str
     evidence_found: list[str]

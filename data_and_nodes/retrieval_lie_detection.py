@@ -1,6 +1,6 @@
-from gamestate import State
-from database_1 import retrieve
-from llms import speed
+from data_and_nodes.gamestate import State
+from data_and_nodes.database_1 import retrieve
+from data_and_nodes.llms import speed
 
 
 def retrieval(state: State):
