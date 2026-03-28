@@ -8,8 +8,16 @@ def retrieval(state: State):
     npc = state["npcs"][npc_name]
     
     last_message = npc.chat_history[-1]  # last message
-    message = last_message["content"]
-    return {'npc.retrieved_data' : retrieve(message)}
+    message = last_message["player"]
+    answer_from_db = retrieve(message)
+    npc.retrieved_data = answer_from_db
+    
+    return {'npcs':
+            {
+                **state['npcs'],
+                npc_name : npc
+            }
+            }
 
 ### add the llm file
 ## install json....
@@ -21,7 +29,7 @@ def detect_lie(state: State):
     npc = state["npcs"][npc_name]
     
     last_message = npc.chat_history[-1]  # last message
-    player_message = last_message["content"]
+    player_message = last_message["player"]
     
     lies_told = npc.lies_told
     lies_caught = npc.lies_caught
@@ -77,7 +85,8 @@ resond with this exact structured JSON
         print("json failed, lie cant be sent, sending no change")
         return {'npcs':
                 {
-                npc_name: npc
+                    **state['npcs'],
+                    npc_name: npc
                 }
             }
         
