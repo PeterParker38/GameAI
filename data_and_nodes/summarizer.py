@@ -37,15 +37,15 @@ def summarization_node(state):
     npc_response = lastchat["npc"]
 
     prompt_edited = f"""
-{SUMMARY_PROMPT}
+    {SUMMARY_PROMPT}
 
-Here is the data:
-NPC: {npc_name}
-Player said: {player_input}
-NPC replied: {npc_response}
+    Here is the data:
+    NPC: {npc_name}
+    Player said: {player_input}
+    NPC replied: {npc_response}
 
-Write the one-line summary now:
-"""
+    Write the one-line summary now:
+    """
 
     response = speed.invoke(prompt_edited)
 
@@ -56,7 +56,7 @@ Write the one-line summary now:
     npc['running_summary'] = new_summary
     return {'npcs':
             {
-                **global_state['npcs'],
+                **state['npcs'],
                 npc_name: npc
             }
     }
