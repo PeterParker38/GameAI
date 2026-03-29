@@ -45,12 +45,14 @@ class intent_engg(BaseModel):
 structured_speed = speed.with_structured_output(intent_engg)
 
 def intent(state):
-    if(state['current_npc'] != ""):
-        return state['current_npc']
+    if(state['current_npc'] != "officer" or state['current_npc'] != ""):
+        return "npc"
     elif(state['search']):
         if(state['search_location']!= ""):
-            return f"search {state.search_location}"
+            return f"search"
         else:
             return "wrong_location"
     elif(state['accusation_availble']):
         return "acuusation available"
+    elif(state['current_npc'] == "officer" or state['current_npc'] == ""):
+        return "officer"

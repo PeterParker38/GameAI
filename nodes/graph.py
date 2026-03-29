@@ -39,17 +39,19 @@ garph.set_entry_point("input")
 garph.add_edge("input",   "intent")
 garph.add_conditional_edges(
         "intent",
-        route_intent,
+        intent,
         {
-            "evidence_search": "discover_evidence_node",
-            "retrieve":       "retrieve",
-            "accusation":      "accusation_node",
-            "officer":         "officer_search_node",
+            "search": "discover_evidence_node",
+            "npc":       "retrieve",
+            "accusation_available":      "accusation_node",
+            "officer":         "prompt_response",
         },
     )
-garph.add_edge("retrieval",        "lie_detection")
+garph.add_edge("retrieve",        "lie_detection")
 garph.add_edge('lie_detection', "sus")
 garph.add_edge("sus",    "prompt_response")
 garph.add_edge("prompt_response", "summary")
-garph.add_edge("summary",       END)
-garph.add_edge("accusation_node",       END)
+garph.add_edge("summary",       'input_node')
+garph.add_edge("accusation_node",       'input_node')
+
+## connect evidence searching nodes 

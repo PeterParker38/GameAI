@@ -23,23 +23,5 @@ import numpy as np
 import uuid
 import os
 
-garph = StateGraph(State)
-garph.add_node('retrieve', retrieval)
-garph.add_node('lie_detection', detect_lie)
-garph.add_node('sus', sus) #update
-garph.add_node('prompt_response', prompt_repsonse)
-garph.add_node('summary', summarization_node)
-garph.add_node('input', input_node)
-garph.add_node('intent', intent)
 
-garph.set_entry_point("input")
-
-garph.add_edge("input",   "intent")
-
-garph.add_edge("retrieval",        "lie_detection")
-garph.add_edge('lie_detection', "sus")
-garph.add_edge("sus",    "prompt_response")
-garph.add_edge("prompt_response", "summarize")
-garph.add_edge("summarize",        "input")
-
-
+#graphs have been moved to garphs.py
