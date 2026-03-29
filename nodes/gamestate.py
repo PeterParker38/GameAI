@@ -18,16 +18,19 @@ class NPC(BaseModel):
 
 
 class State(TypedDict):
-    current_npc: str
+    current_npc: str = "" ##update throught fast api something
+    search: bool = False  ##update throught fast api something
+    search_location: str = ""
+    accusation_available: bool = False
+
+    
     evidence_found: list[str]
     locations_unlocked: dict[str, bool]
-    accusation_available: bool = False
     npcs: dict[str, NPC]
     player_input: str = "",
     to_Search: str = "",
     
     ## to be changed
-    current_location: str = "",
     officer_output: str = "",
     npc_response: str = ""
 

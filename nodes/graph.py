@@ -4,7 +4,7 @@ from nodes.llms import speed, conv
 from nodes.summarizer import summarization_node
 from nodes.interaction import prompt_repsonse
 from nodes.input_node import input_node
-from nodes.sus import sus
+from nodes.sus import officer_search_node, discover_evidence_node, accusation_node
 from nodes.intent import intent
 
 from langgraph.graph import StateGraph, START, END
@@ -26,20 +26,30 @@ import os
 garph = StateGraph(State)
 garph.add_node('retrieve', retrieval)
 garph.add_node('lie_detection', detect_lie)
-garph.add_node('sus', sus) #update
+garph.add_node('sus', sus)
 garph.add_node('prompt_response', prompt_repsonse)
 garph.add_node('summary', summarization_node)
 garph.add_node('input', input_node)
 garph.add_node('intent', intent)
-
+garph.add_node("officier_search_node", officer_search_node)
+garph.add_node("discover_evidence_node", discover_evidence_node)
+garph.add_node("accusation_node", accusation_node)
 garph.set_entry_point("input")
 
 garph.add_edge("input",   "intent")
-
+garph.add_conditional_edges(
+        "intent",
+        route_intent,
+        {
+            "evidence_search": "discover_evidence_node",
+            "retrieve":       "retrieve",
+            "accusation":      "accusation_node",
+            "officer":         "officer_search_node",
+        },
+    )
 garph.add_edge("retrieval",        "lie_detection")
 garph.add_edge('lie_detection', "sus")
 garph.add_edge("sus",    "prompt_response")
-garph.add_edge("prompt_response", "summarize")
-garph.add_edge("summarize",        "input")
-
-
+garph.add_edge("prompt_response", "summary")
+garph.add_edge("summary",       END)
+garph.add_edge("accusation_node",       END)

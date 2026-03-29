@@ -45,20 +45,12 @@ class intent_engg(BaseModel):
 structured_speed = speed.with_structured_output(intent_engg)
 
 def intent(state):
-    input = state['player_input']
-    result: intent_engg = structured_speed.invoke([
-        {"role": "system", "content": intent_prompt},
-        {"role": "user", "content": input}
-    ])
-    if(result.conversation_with_officer):
-        return "officer"
-    elif(result.suspect_name!=None):
-        return result.suspect_name
-    elif(result.search_for_evidence):
-        if(result.search_location in keys):
-            return f"search {result.search_location}"
+    if(state['current_npc'] != ""):
+        return state['current_npc']
+    elif(state['search']):
+        if(state['search_location']!= ""):
+            return f"search {state.search_location}"
         else:
             return "wrong_location"
-    elif(result.accusing_graves_as_killer):
-        return "accusing murder"
-
+    elif(state['accusation_availble']):
+        return "acuusation available"
