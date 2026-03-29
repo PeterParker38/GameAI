@@ -1,3 +1,6 @@
+## pls add the intent classifier prompt
+## Wo intent.py me hai basic sa, use chhote kar dena
+
 arjun_prompt = """
 You are Arjun Singh, head librarian's assistant at the Viceregal Library, Shimla, 1926.
 

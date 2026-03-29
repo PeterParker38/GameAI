@@ -23,13 +23,12 @@ class State(TypedDict):
     locations_unlocked: dict[str, bool]
     accusation_available: bool = False
     npcs: dict[str, NPC]
-    
+    player_input: str = "",
+    to_Search: str = "",
     
     ## to be changed
     current_location: str = "",
     officer_output: str = "",
-    last_found_evidence: str = "",
-    player_input: str = "",
     npc_response: str = ""
 
 arjun = NPC(npc_id='arjun', prompt=arjun_prompt)
@@ -56,11 +55,11 @@ state: State = {
         "graves": graves,
         'officer': officer
     },
+    "player_input": "",
+    "to_search": "",
     #to be changed 
     "current_location": "",
     "officer_output": "",
-    "last_found_evidence": None,
-    "player_input": "",
+    
     "npc_response": ""
 }
-
