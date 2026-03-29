@@ -25,12 +25,12 @@ class State(TypedDict):
     npcs: dict[str, NPC]
     
     
-    ## to be changed
-    current_location: str = "",
-    officer_output: str = "",
-    last_found_evidence: str = "",
-    player_input: str = "",
-    npc_response: str = ""
+    current_location:      str
+    officer_output:        str
+    last_found_evidence:   Optional[str]  
+    player_input:          str
+    npc_response:          str
+    action:                str  
 
 arjun = NPC(npc_id='arjun', prompt=arjun_prompt)
 bell = NPC(npc_id='bell', prompt=bell_prompt)
@@ -38,29 +38,29 @@ graves = NPC(npc_id='graves', prompt=graves_prompt)
 officer = NPC(npc_id='officer', prompt=officer_prompt)
 
 state: State = {
-    "current_npc": "",
-    "evidence_found": [],
+    "current_npc":          "",
+    "evidence_found":       [],
     "locations_unlocked": {
         "Thorne's study": True,
         "Arjun's office": True,
-        "Reading hall": True,
-        "Storage room": False,
-        "Interrogation": False,
-        "Admin office": False,
-        "Pantry": False
+        "Reading hall":   True,
+        "Storage room":   False,
+        "Interrogation":  False,
+        "Admin office":   False,
+        "Pantry":         False,
     },
     "accusation_available": False,
     "npcs": {
-        "arjun": arjun,
-        "bell": bell,
-        "graves": graves,
-        'officer': officer
+        "arjun":   arjun,
+        "bell":    bell,
+        "graves":  graves,
+        "officer": officer,
     },
-    #to be changed 
-    "current_location": "",
-    "officer_output": "",
+    "current_location":    "",
+    "officer_output":      "",
     "last_found_evidence": None,
-    "player_input": "",
-    "npc_response": ""
+    "player_input":        "",
+    "npc_response":        "",
+    "action":              "",
 }
 
