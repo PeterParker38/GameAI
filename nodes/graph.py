@@ -36,9 +36,8 @@ garph.add_node("discover_evidence_node", discover_evidence_node)
 garph.add_node("accusation_node", accusation_node)
 garph.set_entry_point("input")
 
-garph.add_edge("input",   "intent")
 garph.add_conditional_edges(
-        "intent",
+        "input",
         intent,
         {
             "search": "discover_evidence_node",
