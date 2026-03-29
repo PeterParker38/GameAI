@@ -7,3 +7,4 @@ sentence-transformers
 neo4j 
 langchain-community 
 numpy
+google.generativeai

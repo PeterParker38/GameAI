@@ -5,6 +5,7 @@ from nodes.summarizer import summarization_node
 from nodes.interaction import prompt_repsonse
 from nodes.input_node import input_node
 from nodes.sus import sus
+from nodes.intent import intent
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -29,12 +30,12 @@ garph.add_node('sus', sus)
 garph.add_node('prompt_response', prompt_repsonse)
 garph.add_node('summary', summarization_node)
 garph.add_node('input', input_node)
-
+garph.add_node('intent', intent)
 
 garph.set_entry_point("input")
 
 garph.add_edge("input",   "intent")
-garph.add_edge("intent",           "retrieval")
+garph.add_conditional_edges()
 garph.add_edge("retrieval",        "lie_detection")
 garph.add_edge('lie_detection', "sus")
 garph.add_edge("sus",    "prompt_construct")
