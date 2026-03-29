@@ -128,17 +128,10 @@ class State(TypedDict):
     player_input: str = "",
     npc_response: str = ""
 
-
 arjun = NPC(npc_id='arjun', prompt=arjun_prompt)
 bell = NPC(npc_id='bell', prompt=bell_prompt)
 graves = NPC(npc_id='graves', prompt=graves_prompt)
 officer = NPC(npc_id='officer', prompt=officer_prompt)
-
-
-class LLMOutput(BaseModel):
-    response: str
-    lies_told: list[str]
-
 
 state: State = {
     "current_npc": "",
@@ -158,13 +151,7 @@ state: State = {
         "bell": bell,
         "graves": graves,
         'officer': officer
-    },
-
-    #to be changed 
-    "current_location": "",
-    "officer_output": "",
-    "last_found_evidence": None,
-    "player_input": "",
-    "npc_response": ""
+    }
 }
+
 
