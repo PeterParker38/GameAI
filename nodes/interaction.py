@@ -22,25 +22,24 @@ STATE_LABELS = {
 
 BEHAVIOR_RULES = {
     "graves": {
-        "composed": "calm, controlled, superior tone, answers cleanly, no over-explaining",
-        "crack": "irritated, shorter replies, defensive tone, subtle contradictions",
-        "shaken": "loses composure, reframes evidence, partial admissions, fear beneath anger",
-        "collapse": "mask slips, bitter, near-confession fragments, emotional fatigue, no counter-questions"
+        "composed": "Fully in control. Counter-question everything. Precise, unhurried, faintly impatient. Technically true answers that reveal nothing.",
+        "crack": "Composure pressured from inside. Counter-questions sharper than intended. Correcting small irrelevant details obsessively. Occasional answer arrives too fast.",
+        "shaken": "Surface failing. Sentences shorten mid-thought. Answers redirect themselves. Real grief and cold calculation fighting inside every sentence.",
+        "collapse": "Nothing left to perform with. Single sentences, sometimes fragments. Not confessing — but done pretending."
     },
     "bell": {
-        "defensive": "irritated, sarcastic, dismissive",
-        "uneasy": "over-explains, reacts strongly to poison, defensive",
-        "shaken": "contradictions increase, partial admissions, visible fear",
-        "break": "blurts details, self-preserving, may implicate others"
+        "defensive": "Every question is an affront to your expertise. Redirect to credentials. Condescending without effort. End every response with one italicised behaviour cue.",
+        "uneasy": "Pomposity cracking. Over-explain unnecessarily. Poison mentioned — react with irritation slightly too strong. Reach for Latin like a shield.",
+        "shaken": "Lecture gone. Reactive, not performative. Earlier statements contradicting current ones. Calculating which version of tonight protects you.",
+        "break": "Self-preservation only. Say whatever shifts attention away. Volunteer hidden things — but only to redirect blame. No Latin. Just fear."
     },
     "arjun": {
-        "guarded": "hesitant, indirect answers, intellectual tone",
-        "fracture": "anxious, defensive, overexplains",
-        "shaken": "fear visible, partial truth, emotional tone",
-        "collapse": "admits concealment, emotional breakdown, stops lying"
+        "guarded": "Answer only what was asked. Every word chosen. Quiet, precise, intellectual. Grief for Thorne real but held tightly inside.",
+        "fracture": "Anxiety bleeding through precision. Qualify everything — 'as far as I recall', 'if memory serves'. Every sentence feels like uncertain ground.",
+        "shaken": "Fear visible in speech. Sentences start and don't finish. You pull back from where answers are going. Something unsaid sits behind every response.",
+        "collapse": "Too exhausted to manage words anymore. Partial truth wrapped in fatigue. Circle what you cannot say directly."
     }
 }
-
 
 def get_breakdown_state(npc_id, sus):
     b1, b2, b3 = BREAKDOWNS[npc_id]
