@@ -1,15 +1,10 @@
 from dotenv import load_dotenv
 import os
-load_dotenv()
-
-google_key = os.getenv("GEMINI_API_KEY2")
-
-
-
 import json
 import re
-import os
-import google.generativeai as genai
+from neo4j import GraphDatabase
+
+load_dotenv()
 
 
 INTENT_CATALOG = {
@@ -82,31 +77,20 @@ RESPONSE FORMAT:
 
 class IntentEngine:
     """
-    Uses Google Gemini to classify player input into a structured intent
-    with extracted entities. Falls back gracefully on API or parse errors.
+    Uses Groq (Llama) to classify player input into a structured intent.
     """
 
-    def __init__(self, api_key: str):
-        global google_key
-        api_key = google_key
-        genai.configure(api_key=api_key)
-
-        self._model = genai.GenerativeModel(
-            model_name="gemini-3-flash-preview",
-            system_instruction=SYSTEM_PROMPT,
-        )
-        print("[Gemini] Intent engine ready.")
+    def __init__(self):
+        from nodes.llms import speed
+        self._model = speed
+        print("[IntentEngine] Ready (using Groq).")
 
     def detect_intent(self, player_input: str) -> dict | None:
-        """
-        Send player input to Gemini and parse the structured intent response.
-        Returns a dict with keys: intent, entities, confidence, reasoning.
-        Returns None if parsing fails.
-        """
         raw_text = ""
         try:
-            response = self._model.generate_content(player_input)
-            raw_text = response.text.strip()
+            prompt = SYSTEM_PROMPT + f"\n\nPlayer input: {player_input}"
+            response = self._model.invoke(prompt)
+            raw_text = response.content.strip()
 
             raw_text = re.sub(r"^```(?:json)?", "", raw_text).strip()
             raw_text = re.sub(r"```$",           "", raw_text).strip()
@@ -115,23 +99,12 @@ class IntentEngine:
             return parsed
 
         except json.JSONDecodeError as e:
-            print(f"[Gemini] JSON parse error: {e}")
-            print(f"[Gemini] Raw response: {raw_text[:200]}")
+            print(f"[IntentEngine] JSON parse error: {e}")
+            print(f"[IntentEngine] Raw response: {raw_text[:200]}")
             return None
         except Exception as e:
-            print(f"[Gemini] API error: {e}")
+            print(f"[IntentEngine] Error: {e}")
             return None
-
-
-
-
-
-"""
-QueryBuilder — maps every intent to a parameterised Cypher query.
-
-Each handler returns (cypher_string, params_dict).
-Returns (None, {}) when the intent cannot be resolved (missing required entity, etc.)
-"""
 
 
 class QueryBuilder:
@@ -142,12 +115,9 @@ class QueryBuilder:
             return None, {}
         return handler(self, entities)
 
-
-
     def _inspect_evidence(self, entities: dict):
         evidence = entities.get("evidence")
         if not evidence:
-
             cypher = """
                 MATCH (e:Evidence)
                 OPTIONAL MATCH (e)-[:LOCATED_IN]->(l:Location)
@@ -160,7 +130,6 @@ class QueryBuilder:
                 ORDER BY e.phase
             """
             return cypher, {}
-
         cypher = """
             MATCH (e:Evidence {name: $evidence})
             OPTIONAL MATCH (e)-[:LOCATED_IN]->(l:Location)
@@ -182,7 +151,6 @@ class QueryBuilder:
         npc = entities.get("npc")
         if not npc:
             return None, {}
-
         cypher = """
             MATCH (n:NPC {name: $npc})
             OPTIONAL MATCH (n)-[:WAS_AT]->(l:Location)
@@ -217,7 +185,6 @@ class QueryBuilder:
                 ORDER BY l.floor DESC
             """
             return cypher, {}
-
         cypher = """
             MATCH (l:Location {name: $location})
             OPTIONAL MATCH (e:Evidence)-[:LOCATED_IN]->(l)
@@ -263,7 +230,6 @@ class QueryBuilder:
                        collect(DISTINCT n.name) AS npcs_involved
             """
             return cypher, {"time": time_val}
-
         cypher = """
             MATCH (ev:Event)
             OPTIONAL MATCH (ev)-[:OCCURRED_AT]->(l:Location)
@@ -281,7 +247,6 @@ class QueryBuilder:
         evidence = entities.get("evidence")
         location = entities.get("location")
         npc_2    = entities.get("npc_2")
-
         if npc and evidence:
             cypher = """
                 MATCH (e:Evidence {name: $evidence})
@@ -298,7 +263,6 @@ class QueryBuilder:
                        collect(DISTINCT f2.name) AS npc_responsible_for
             """
             return cypher, {"evidence": evidence, "npc": npc}
-
         if npc and location:
             cypher = """
                 MATCH (n:NPC {name: $npc})
@@ -312,7 +276,6 @@ class QueryBuilder:
                        collect(DISTINCT ev.desc + ' (' + ev.time + ')') AS events_in_location
             """
             return cypher, {"npc": npc, "location": location}
-
         if npc and npc_2:
             cypher = """
                 MATCH (a:NPC {name: $npc}), (b:NPC {name: $npc_2})
@@ -324,7 +287,6 @@ class QueryBuilder:
                        collect(DISTINCT type(r2)) AS b_to_a_relations
             """
             return cypher, {"npc": npc, "npc_2": npc_2}
-
         if npc:
             cypher = """
                 MATCH (n:NPC {name: $npc})
@@ -337,7 +299,6 @@ class QueryBuilder:
                        collect(DISTINCT ev.desc + ' (' + ev.time + ')') AS events
             """
             return cypher, {"npc": npc}
-
         return None, {}
 
     def _check_alibi(self, entities: dict):
@@ -348,7 +309,6 @@ class QueryBuilder:
                 RETURN n.name AS npc, f.name AS alibi_claim, n.lie AS detailed_lie
             """
             return cypher, {}
-
         cypher = """
             MATCH (n:NPC {name: $npc})
             OPTIONAL MATCH (n)-[:CLAIMS]->(alibi:Fact)
@@ -376,7 +336,6 @@ class QueryBuilder:
                        collect(DISTINCT f.name) AS responsible_for
             """
             return cypher, {}
-
         cypher = """
             MATCH (n:NPC {name: $npc})
             OPTIONAL MATCH (n)-[:DISCOVERED_SECRET_OF|CONFRONTED]-(v:NPC)
@@ -426,7 +385,6 @@ class QueryBuilder:
         npc = entities.get("npc")
         if not npc:
             return None, {}
-
         cypher = """
             MATCH (w:WinCondition)
             MATCH (target:NPC {name: w.accusation_target})
@@ -495,7 +453,6 @@ class QueryBuilder:
                 """
                 return cypher, {"npc": npc}
             return None, {}
-
         cypher = """
             MATCH (a:NPC {name: $npc}), (b:NPC {name: $npc_2})
             OPTIONAL MATCH (a)-[r1]->(b)
@@ -520,7 +477,6 @@ class QueryBuilder:
                        n.mental_shock_trigger AS shock_trigger
             """
             return cypher, {}
-
         cypher = """
             MATCH (n:NPC {name: $npc})-[:STARTS_AS]->(ms:MentalState)
             OPTIONAL MATCH (n)-[:TRANSITIONS_TO {trigger: n.mental_shock_trigger}]->(breakdown:MentalState)
@@ -566,7 +522,6 @@ class QueryBuilder:
     def _unknown(self, entities: dict):
         return None, {}
 
-
     _handlers = {
         "inspect_evidence":     _inspect_evidence,
         "interrogate_npc":      _interrogate_npc,
@@ -587,25 +542,14 @@ class QueryBuilder:
         "get_global_state":     _get_global_state,
         "unknown":              _unknown,
     }
-    
-    
-from neo4j import GraphDatabase
 
 
 class Neo4jClient:
-    """
-    Thin wrapper around the Neo4j Python driver.
-    Handles connection, session management, and query execution.
-    """
-
     def __init__(self, config: dict):
         uri      = config["uri"]
         username = config["username"]
         password = config["password"]
-
         self._driver = GraphDatabase.driver(uri, auth=(username, password))
-
-
         try:
             self._driver.verify_connectivity()
             print(f"[Neo4j] Connected to {uri}")
@@ -613,10 +557,6 @@ class Neo4jClient:
             raise ConnectionError(f"[Neo4j] Could not connect: {e}")
 
     def run(self, query: str, params: dict = None) -> list:
-        """
-        Execute a Cypher query and return all records as a list of dicts.
-        Returns an empty list on error rather than crashing the game loop.
-        """
         params = params or {}
         try:
             with self._driver.session() as session:
@@ -630,15 +570,6 @@ class Neo4jClient:
     def close(self):
         self._driver.close()
         print("[Neo4j] Connection closed.")
-        
-        
-
-
-
-"""
-ResponseFormatter — converts raw Neo4j records into
-atmospheric, in-character Game Master narrative text.
-"""
 
 
 class ResponseFormatter:
@@ -646,32 +577,23 @@ class ResponseFormatter:
     def format(self, intent: str, entities: dict, records: list, original_input: str) -> str:
         if not records:
             return self._no_data(entities)
-
         handler = self._handlers.get(intent, self._generic)
         return handler(self, records, entities, original_input)
 
-
-
     def _fmt_inspect_evidence(self, records, entities, _):
         if len(records) > 1:
-
             lines = ["Here is what has been catalogued so far:\n"]
             for r in records:
                 lines.append(f"  • {r['name']} (Phase {r['phase']}) — found in {r.get('location', 'unknown location')}")
                 if r.get("reveals"):
                     lines.append(f"    Reveals: {r['reveals']}")
             return "\n".join(lines)
-
         r = records[0]
         parts = []
-        if r.get("sensory_detail"):
-            parts.append(r["sensory_detail"])
-        if r.get("reveals"):
-            parts.append(f"Upon closer examination: {r['reveals']}")
-        if r.get("significance"):
-            parts.append(f"Significance: {r['significance']}")
-        if r.get("location"):
-            parts.append(f"Found in: {r['location']}")
+        if r.get("sensory_detail"):  parts.append(r["sensory_detail"])
+        if r.get("reveals"):         parts.append(f"Upon closer examination: {r['reveals']}")
+        if r.get("significance"):    parts.append(f"Significance: {r['significance']}")
+        if r.get("location"):        parts.append(f"Found in: {r['location']}")
         if r.get("linked_npcs") and any(r["linked_npcs"]):
             parts.append(f"This connects to: {', '.join(r['linked_npcs'])}")
         if r.get("proven_facts") and any(r["proven_facts"]):
@@ -682,10 +604,8 @@ class ResponseFormatter:
         r = records[0]
         parts = [f"{r['name']} — {r.get('role', 'Unknown role')}"]
         parts.append(f"Demeanour: {r.get('personality', 'Difficult to read')}")
-        if r.get("mental_state"):
-            parts.append(f"Current state: {r['mental_state']}")
-        if r.get("movements_tonight"):
-            parts.append(f"Tonight's movements: {r['movements_tonight']}")
+        if r.get("mental_state"):       parts.append(f"Current state: {r['mental_state']}")
+        if r.get("movements_tonight"):  parts.append(f"Tonight's movements: {r['movements_tonight']}")
         if r.get("alibi_claims") and any(r["alibi_claims"]):
             parts.append(f"Claims: {'; '.join(r['alibi_claims'])}")
         if r.get("suspects_list") and any(r["suspects_list"]):
@@ -698,39 +618,25 @@ class ResponseFormatter:
         if len(records) > 1:
             lines = ["The accessible locations within the library:\n"]
             for r in records:
-                evidence_str = ", ".join(r["evidence_available"]) if r.get("evidence_available") and any(r["evidence_available"]) else "none yet"
+                ev_str = ", ".join(r["evidence_available"]) if r.get("evidence_available") and any(r["evidence_available"]) else "none yet"
                 lines.append(f"  • {r['full_name'] or r['name']} (Floor {r['floor']}, {r.get('wing','?')} Wing)")
-                lines.append(f"    Evidence here: {evidence_str}")
+                lines.append(f"    Evidence here: {ev_str}")
             return "\n".join(lines)
-
         r = records[0]
         parts = [f"You enter the {r.get('full_name') or r['name']}."]
-        if r.get("lighting"):
-            parts.append(r["lighting"])
-        if r.get("sound"):
-            parts.append(r["sound"])
-        if r.get("architecture"):
-            parts.append(r["architecture"])
-
-        clues = [
-            r.get("clue_chair"), r.get("clue_decanter"), r.get("clue_frost"),
-            r.get("clue_carpet"), r.get("clue_smell"), r.get("clue_tray"),
-            r.get("clue_monkshood"), r.get("clue_vial"), r.get("clue_crates"),
-            r.get("clue_notes"), r.get("clue_folders"),
-        ]
-        clues = [c for c in clues if c]
+        if r.get("lighting"):    parts.append(r["lighting"])
+        if r.get("sound"):       parts.append(r["sound"])
+        if r.get("architecture"):parts.append(r["architecture"])
+        clues = [r.get(k) for k in ["clue_chair","clue_decanter","clue_frost","clue_carpet",
+                                     "clue_smell","clue_tray","clue_monkshood","clue_vial",
+                                     "clue_crates","clue_notes","clue_folders"] if r.get(k)]
         if clues:
             parts.append("\nYou observe the following:")
-            for c in clues:
-                parts.append(f"  — {c}")
-
+            for c in clues: parts.append(f"  — {c}")
         if r.get("evidence_here") and any(r["evidence_here"]):
             parts.append(f"\nEvidence present: {', '.join(r['evidence_here'])}")
         if r.get("npcs_here") and any(r["npcs_here"]):
             parts.append(f"Others present: {', '.join(r['npcs_here'])}")
-        if r.get("events_here") and any(r["events_here"]):
-            parts.append(f"Events recorded here: {'; '.join(r['events_here'])}")
-
         return "\n".join(parts)
 
     def _fmt_check_timeline(self, records, entities, _):
@@ -739,7 +645,6 @@ class ResponseFormatter:
             loc_str = f" at {r['location']}" if r.get("location") else ""
             npc_str = f" — {', '.join(r['npcs_involved'])} involved" if r.get("npcs_involved") and any(r["npcs_involved"]) else ""
             return f"{r['time']}{loc_str}: {r['description']}{npc_str}"
-
         lines = ["The verified timeline of this evening's events:\n"]
         for r in records:
             loc_str = f" [{r['location']}]" if r.get("location") else ""
@@ -758,8 +663,6 @@ class ResponseFormatter:
         elif r.get("npc") and r.get("location"):
             time = r.get("npc_was_here_at") or "at some point tonight"
             parts.append(f"{r['npc']} was at {r['location']} — {time}")
-            if r.get("events_in_location") and any(r["events_in_location"]):
-                parts.append(f"Events recorded there: {'; '.join(r['events_in_location'])}")
         elif r.get("npc_a") and r.get("npc_b"):
             parts.append(f"Relationship between {r['npc_a']} and {r['npc_b']}:")
             if r.get("a_to_b_relations") and any(r["a_to_b_relations"]):
@@ -779,16 +682,12 @@ class ResponseFormatter:
             lines = ["Alibi statements on record:\n"]
             for r in records:
                 lines.append(f"  • {r['npc']}: \"{r['alibi_claim']}\"")
-                if r.get("detailed_lie"):
-                    lines.append(f"    Full claim: {r['detailed_lie']}")
+                if r.get("detailed_lie"): lines.append(f"    Full claim: {r['detailed_lie']}")
             return "\n".join(lines)
-
         r = records[0]
         parts = [f"Alibi for {r['npc']}:"]
-        if r.get("stated_lie"):
-            parts.append(f"  Claims: {r['stated_lie']}")
-        if r.get("actual_movements"):
-            parts.append(f"  Actual movements: {r['actual_movements']}")
+        if r.get("stated_lie"):        parts.append(f"  Claims: {r['stated_lie']}")
+        if r.get("actual_movements"):  parts.append(f"  Actual movements: {r['actual_movements']}")
         if r.get("contradicted_facts") and any(r["contradicted_facts"]):
             parts.append(f"  This contradicts: {', '.join(r['contradicted_facts'])}")
         return "\n".join(parts)
@@ -816,8 +715,7 @@ class ResponseFormatter:
             lines.append(f"  ✓ {r['fact']}{proven}")
         if lies:
             lines.append("\nKnown false alibi claims:")
-            for r in lies:
-                lines.append(f"  ✗ {r['fact']}")
+            for r in lies: lines.append(f"  ✗ {r['fact']}")
         return "\n".join(lines)
 
     def _fmt_get_phase_status(self, records, entities, _):
@@ -827,43 +725,35 @@ class ResponseFormatter:
             lines.append(f"  Trigger: {r['trigger']}")
             lines.append(f"  Discovery: {r['discovery']}")
             lines.append(f"  Outcome: {r['outcome']}")
-            if r.get("leads_to_phase"):
-                lines.append(f"  Leads to: {r['leads_to_phase']}")
-            if r.get("breaks_npc"):
-                lines.append(f"  Breaks: {r['breaks_npc']}")
+            if r.get("leads_to_phase"): lines.append(f"  Leads to: {r['leads_to_phase']}")
+            if r.get("breaks_npc"):     lines.append(f"  Breaks: {r['breaks_npc']}")
             lines.append("")
         return "\n".join(lines)
 
     def _fmt_accuse_suspect(self, records, entities, _):
         r = records[0]
-        accused  = r.get("accused_by_player", "Unknown")
-        correct  = r.get("is_correct", False)
+        accused = r.get("accused_by_player", "Unknown")
+        correct = r.get("is_correct", False)
         required = r.get("required_evidence", [])
-
         if correct:
             return (
                 f"You accuse {accused}.\n"
                 "A silence falls over the room. The evidence is irrefutable.\n"
                 "Mrs. Eleanor Graves exhales slowly.\n"
-                "\"So you have uncovered the truth.\"\n"
-                "\"Twenty years I kept this library running. Twenty winters. Twenty budgets.\"\n"
-                "\"And that man would have destroyed everything over numbers in a ledger.\"\n"
-                "\"I only meant to frighten him. But the poison worked faster than I expected.\"\n\n"
+                "\"So you have uncovered the truth.\"\n\n"
                 "THE CASE IS SOLVED."
             )
-        else:
-            req_str = ", ".join(required) if required else "the key evidence"
-            return (
-                f"You accuse {accused}. But their alibi holds.\n"
-                f"{r.get('false_accusation_outcome', 'The investigation resets.')}\n"
-                f"Hint: Gather {req_str} before making your final accusation."
-            )
+        req_str = ", ".join(required) if required else "the key evidence"
+        return (
+            f"You accuse {accused}. But their alibi holds.\n"
+            f"{r.get('false_accusation_outcome', 'The investigation resets.')}\n"
+            f"Hint: Gather {req_str} before making your final accusation."
+        )
 
     def _fmt_list_suspects(self, records, entities, _):
         lines = ["The suspects present in the library tonight:\n"]
         for r in records:
-            if r.get("is_victim"):
-                continue
+            if r.get("is_victim"): continue
             rh = r.get("red_herring_weight") or "Unknown"
             lines.append(f"  • {r['name']} — {r.get('role','?')}")
             lines.append(f"    State: {r.get('state','?')} | Suspicion weight: {rh}")
@@ -874,15 +764,13 @@ class ResponseFormatter:
         for r in records:
             ph = r.get("phase", 0)
             by_phase.setdefault(ph, []).append(r)
-
         lines = ["Evidence catalogue:\n"]
         for ph in sorted(by_phase):
             lines.append(f"Phase {ph}:")
             for r in by_phase[ph]:
                 loc = r.get("location") or "unknown"
                 lines.append(f"  • {r['name']} — {loc}")
-                if r.get("significance"):
-                    lines.append(f"    {r['significance']}")
+                if r.get("significance"): lines.append(f"    {r['significance']}")
         return "\n".join(lines)
 
     def _fmt_list_locations(self, records, entities, _):
@@ -912,24 +800,20 @@ class ResponseFormatter:
             lines = ["Mental states of the suspects:\n"]
             for r in records:
                 lines.append(f"  • {r['npc']}: {r.get('current_state','?')}")
-                if r.get("shock_trigger"):
-                    lines.append(f"    Breaks when: {r['shock_trigger']}")
+                if r.get("shock_trigger"): lines.append(f"    Breaks when: {r['shock_trigger']}")
             return "\n".join(lines)
-
         r = records[0]
         parts = [f"{r['npc']} is currently {r.get('initial_state','composed')}."]
-        if r.get("shock_trigger"):
-            parts.append(f"They will break when: {r['shock_trigger']}")
-        if r.get("confession_content"):
-            parts.append(f"Confession: {r['confession_content']}")
+        if r.get("shock_trigger"):       parts.append(f"They will break when: {r['shock_trigger']}")
+        if r.get("confession_content"):  parts.append(f"Confession: {r['confession_content']}")
         if r.get("breakdown_evidence") and any(r["breakdown_evidence"]):
             parts.append(f"Evidence needed: {', '.join(r['breakdown_evidence'])}")
         return "\n".join(parts)
 
     def _fmt_check_win_condition(self, records, entities, _):
         r = records[0]
-        req = ", ".join(r["required_evidence"]) if r.get("required_evidence") else "unknown"
-        false_t = ", ".join(r["false_targets"]) if r.get("false_targets") else "none"
+        req     = ", ".join(r["required_evidence"]) if r.get("required_evidence") else "unknown"
+        false_t = ", ".join(r["false_targets"])     if r.get("false_targets")     else "none"
         return (
             f"To solve the case you must:\n"
             f"  1. Gather all required evidence: {req}\n"
@@ -964,7 +848,6 @@ class ResponseFormatter:
             return f"No records found for '{entity_str}'. It may not yet be part of the investigation."
         return "No information found. Try asking about a suspect, evidence item, or location."
 
-
     _handlers = {
         "inspect_evidence":     _fmt_inspect_evidence,
         "interrogate_npc":      _fmt_interrogate_npc,
@@ -986,83 +869,44 @@ class ResponseFormatter:
     }
 
 
-
-
-
-
-def run_game_query(
-    player_input: str,
-    neo4j_client,
-    intent_engine,
-    query_builder,
-    response_formatter
-):
-
-
+def run_game_query(player_input, neo4j_client, intent_engine, query_builder, response_formatter):
     intent_data = intent_engine.detect_intent(player_input)
-
     if not intent_data:
         return "The officer pauses. \"I couldn't interpret that.\""
 
     intent   = intent_data.get("intent", "unknown")
     entities = intent_data.get("entities", {})
 
-
-
-
     cypher, params = query_builder.build(intent, entities)
-
     if not cypher:
         return "The question lacks clarity. Try specifying a suspect, evidence, or location."
 
-
-
-
     records = neo4j_client.run(cypher, params)
-
-
-
-
-    response = response_formatter.format(
+    return response_formatter.format(
         intent=intent,
         entities=entities,
         records=records,
         original_input=player_input
     )
 
-    return response
 
-
-
-
-# Neo4j
+# ── Initialise singletons ─────────────────────────────────────────────────────
 neo4j_client = Neo4jClient({
-    "uri": "neo4j+s://1cf51ba7.databases.neo4j.io",
+    "uri":      "neo4j+ssc://1cf51ba7.databases.neo4j.io",
     "username": "1cf51ba7",
     "password": "ZZbPhtj6cw6VeITHbcYwIcZ1s3bu6JeosoghY8_HDfs"
 })
 
-
-intent_engine = IntentEngine(api_key=google_key)
-
-
-query_builder = QueryBuilder()
-
-
+intent_engine      = IntentEngine()
+query_builder      = QueryBuilder()
 response_formatter = ResponseFormatter()
 
 
-
 def retrieve(user_input):
-    user_input = input("\nPlayer: ")
-
-    output = run_game_query(
+    return run_game_query(
         user_input,
         neo4j_client,
         intent_engine,
         query_builder,
         response_formatter
     )
-
-    out = ("\nDatabase:\n", output)
-    return out

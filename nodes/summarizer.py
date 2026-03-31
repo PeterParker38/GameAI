@@ -14,9 +14,9 @@ Focus on:
 Do NOT write emotional fluff. Do NOT start with "The player". Be direct and factual.
 
 Examples:
-"Bell denied poisoning Thorne but became defensive when aconite was mentioned."
-"Arjun appeared anxious when page 42 was brought up."
-"Mrs. Graves stayed calm and redirected questions about the pantry."
+Bell denied poisoning Thorne but became defensive when aconite was mentioned.
+Arjun appeared anxious when page 42 was brought up.
+Mrs. Graves stayed calm and redirected questions about the pantry.
 """
 
 
@@ -26,37 +26,50 @@ def summarization_node(state):
     if not npc_name or npc_name not in state["npcs"]:
         return {}
 
-    npc = state["npcs"][npc_name]
+    # officer conversations don't need summarising
+    if npc_name == "officer":
+        return {}
+
+    npc          = state["npcs"][npc_name]
     chat_history = npc.chat_history
 
     if not chat_history:
         return {}
 
     lastchat = chat_history[-1]
-    player_input = lastchat["player"]
-    npc_response = lastchat["npc"]
 
-    prompt_edited = f"""
-    {SUMMARY_PROMPT}
+    # only summarise once the NPC has actually replied
+    if "npc" not in lastchat:
+        return {}
 
-    Here is the data:
-    NPC: {npc_name}
-    Player said: {player_input}
-    NPC replied: {npc_response}
+    player_msg  = lastchat["player"]
+    npc_reply   = lastchat["npc"]
 
-    Write the one-line summary now:
-    """
+    prompt = f"""{SUMMARY_PROMPT}
 
-    response = speed.invoke(prompt_edited)
+NPC: {npc_name}
+Player said: {player_msg}
+NPC replied: {npc_reply}
 
-    summary_line = response.content.strip() if hasattr(response, "content") else str(response).strip()
+Write the one-line summary now (no quotes, no preamble):"""
 
-    old_summary = npc["running_summary"]
-    new_summary = old_summary+ summary_line
-    npc['running_summary'] = new_summary
-    return {'npcs':
-            {
-                **state['npcs'],
-                npc_name: npc
-            }
+    try:
+        response     = speed.invoke(prompt)
+        summary_line = response.content.strip() if hasattr(response, "content") else str(response).strip()
+    except Exception as e:
+        print(f"[summarizer] LLM error: {e}")
+        return {}
+
+    if not summary_line:
+        return {}
+
+    # ✅ Pydantic attribute access — npc is a BaseModel, not a dict
+    old_summary        = npc.running_summary or ""
+    npc.running_summary = (old_summary + " " + summary_line).strip()
+
+    return {
+        "npcs": {
+            **state["npcs"],
+            npc_name: npc
+        }
     }
