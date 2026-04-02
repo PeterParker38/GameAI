@@ -31,7 +31,7 @@ def run(command):
     state_values = graph.get_state(config).values
     return state_values.get("npc_response", "...")
 
-inp = input("question : ")
+inp = input("You : ")
 state['player_input'] = inp
 print(f"{state['current_npc']}:", run(state))
 
