@@ -9,3 +9,5 @@ numpy
 google-generativeai
 fastapi
 uvicorn
+aiofiles
+pydantic
