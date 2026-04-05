@@ -1,14 +1,15 @@
+# fastapi_connection.py
+# Run: uvicorn fastapi_connection:app --reload
+# Test: http://localhost:8000/docs
+
 import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from langgraph.types import Command
 
-from nodes.graph import garph
+from nodes.graph     import garph
 from nodes.gamestate import state
-
 
 app = FastAPI()
 
@@ -18,14 +19,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.mount("/web", StaticFiles(directory="web"), name="web")
-
-
-@app.get("/")
-def serve_game():
-    return FileResponse("web/index.html")
-
 
 THREAD       = {"configurable": {"thread_id": "shimla_default"}}
 LATEST_STATE = {}
@@ -42,6 +35,16 @@ VALID_LOCATIONS = {
     "Pantry",
 }
 
+LOCATION_KEYWORDS = {
+    "Thorne's study": ["thorne", "study", "thorne's study"],
+    "Arjun's office": ["arjun", "office", "arjun's office"],
+    "Reading hall":   ["reading", "hall", "reading hall"],
+    "Storage room":   ["storage", "storage room"],
+    "Interrogation":  ["interrogation"],
+    "Admin office":   ["admin", "administrative", "admin office"],
+    "Pantry":         ["pantry"],
+}
+
 
 # ── Request Models ─────────────────────────────────────────────
 
@@ -50,18 +53,26 @@ class TalkRequest(BaseModel):
     player_input: str
 
 class SearchRequest(BaseModel):
-    location: str
+    location:    str | None = None   # button click
+    player_text: str | None = None   # text input
 
 
-# ── Helper ─────────────────────────────────────────────────────
-# Used by /talk and /search only
-# Returns everything the game engine needs to update UI after an action
+# ── Helpers ────────────────────────────────────────────────────
+
+def extract_location_from_text(text: str) -> str | None:
+    text_lower = text.lower()
+    for location, keywords in LOCATION_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in text_lower:
+                return location
+    return None
+
 
 def extract_response(graph_state: dict) -> dict:
-    npcs          = graph_state.get("npcs", {})
-    scores        = {}
-    summaries     = {}
-    lies_caught   = {}
+    npcs        = graph_state.get("npcs", {})
+    scores      = {}
+    summaries   = {}
+    lies_caught = {}
 
     for npc_id, npc in npcs.items():
         if npc_id == "officer":
@@ -73,11 +84,12 @@ def extract_response(graph_state: dict) -> dict:
     return {
         "current_npc":          graph_state.get("current_npc", ""),
         "npc_reply":            graph_state.get("npc_response", ""),
-        "search_result":        graph_state.get("search_result", ""),
+        "search_result":        graph_state.get("officer_output", ""),
         "scores":               scores,
         "total_suspicion":      sum(scores.values()),
         "evidence_found":       graph_state.get("evidence_found", []),
         "locations_unlocked":   graph_state.get("locations_unlocked", {}),
+        "accusation_available": graph_state.get("accusation_available", False),
         "summaries":            summaries,
         "lies_caught":          lies_caught,
     }
@@ -97,7 +109,7 @@ def start_game():
     return {
         "status":    "game_started",
         "thread_id": THREAD["configurable"]["thread_id"],
-        **extract_response(result),
+        **extract_response(result)
     }
 
 
@@ -135,10 +147,28 @@ def talk(request: TalkRequest):
 def search(request: SearchRequest):
     global LATEST_STATE
 
-    location = request.location.strip()
+    location = None
+
+    if request.location:
+        location = request.location.strip()
+    elif request.player_text:
+        location = extract_location_from_text(request.player_text)
+        if not location:
+            return {
+                "error":   "no_location_found",
+                "message": "Could not identify a location. Try mentioning storage room, pantry, admin office etc."
+            }
+    else:
+        return {
+            "error":   "missing_input",
+            "message": "Provide either a location name or player text."
+        }
 
     if location not in VALID_LOCATIONS:
-        return {"error": "invalid_location", "message": f"Unknown location: {location}"}
+        return {
+            "error":   "invalid_location",
+            "message": f"Unknown location: {location}"
+        }
 
     result = garph.invoke(
         Command(
@@ -154,14 +184,17 @@ def search(request: SearchRequest):
     )
     LATEST_STATE = result
 
-    return {"action": "search", "location_searched": location, **extract_response(result)}
+    return {
+        "action":            "search",
+        "location_searched": location,
+        **extract_response(result)
+    }
 
 
 @app.get("/current-situation")
 def current_situation():
     npcs = LATEST_STATE.get("npcs", {})
 
-    # Only what the player should see — no internal scores or lie data
     npc_summaries = {
         npc_id: getattr(npc, "running_summary", "No interactions yet.")
         for npc_id, npc in npcs.items()
@@ -172,5 +205,6 @@ def current_situation():
         "status":               "current_game_state",
         "evidence_found":       LATEST_STATE.get("evidence_found", []),
         "locations_unlocked":   LATEST_STATE.get("locations_unlocked", {}),
+        "accusation_available": LATEST_STATE.get("accusation_available", False),
         "npc_summaries":        npc_summaries,
     }
