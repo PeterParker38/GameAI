@@ -891,10 +891,17 @@ def run_game_query(player_input, neo4j_client, intent_engine, query_builder, res
 
 
 # ── Initialise singletons ─────────────────────────────────────────────────────
+
+
+uri = os.getenv('uri')
+username = os.getenv('user_name')
+password = os.getenv('password')
+
+
 neo4j_client = Neo4jClient({
-    "uri":      "neo4j+ssc://1cf51ba7.databases.neo4j.io",
-    "username": "1cf51ba7",
-    "password": "ZZbPhtj6cw6VeITHbcYwIcZ1s3bu6JeosoghY8_HDfs"
+    "uri": uri,
+    "username": username,
+    "password": password
 })
 
 intent_engine      = IntentEngine()
