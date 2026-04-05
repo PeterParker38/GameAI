@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langgraph.types import Command
 
-from nodes.graph     import garph
+from nodes.graph     import garph_
 from nodes.gamestate import state
 
 app = FastAPI()
@@ -103,7 +103,7 @@ def start_game():
 
     THREAD = {"configurable": {"thread_id": f"shimla_{int(time.time())}"}}
 
-    result       = garph.invoke(state, config=THREAD)
+    result       = garph_.invoke(state, config=THREAD)
     LATEST_STATE = result
 
     return {
@@ -126,7 +126,7 @@ def talk(request: TalkRequest):
     if not player_input:
         return {"error": "empty_input", "message": "player_input cannot be empty."}
 
-    result = garph.invoke(
+    result = garph_.invoke(
         Command(
             resume = player_input,
             update = {
@@ -170,7 +170,7 @@ def search(request: SearchRequest):
             "message": f"Unknown location: {location}"
         }
 
-    result = garph.invoke(
+    result = garph_.invoke(
         Command(
             resume = "",
             update = {
